@@ -1,0 +1,6 @@
+{
+  "watch": ["src/server"],
+  "ext": "js,json",
+  "ignore": ["src/client/*", "dist/*"],
+  "exec": "node -r dotenv/config src/server/server.js"
+} 

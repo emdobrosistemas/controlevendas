@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Vendas</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .notification {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            color: white;
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 50;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: #10B981;
+        }
+
+        .notification.error {
+            background-color: #EF4444;
+        }
+
+        .notification.warning {
+            background-color: #F59E0B;
+        }
+    </style>
+</head>
+<body class="bg-white">
+    <!-- Tela de Login -->
+    <div id="telaLogin" class="min-h-screen flex items-center justify-center bg-black">
+        <div class="max-w-md w-full bg-black rounded-lg shadow-lg p-8 border border-gray-800">
+            <div class="text-center mb-8">
+                <img src="images/logo-branca.png" alt="Brasil em Dobro" class="h-20 mx-auto mb-6">
+                <h2 class="text-2xl font-bold text-white">Login</h2>
+            </div>
+            
+            <form id="formLogin" class="space-y-6">
+                <div>
+                    <label class="block text-gray-300 mb-2">Email</label>
+                    <input type="email" name="email" class="w-full p-3 border bg-gray-900 border-gray-700 rounded text-white" required>
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-2">Senha</label>
+                    <input type="password" name="senha" class="w-full p-3 border bg-gray-900 border-gray-700 rounded text-white" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded hover:bg-blue-700 transition-colors">
+                    Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sistema (inicialmente escondido) -->
+    <div id="sistema" class="hidden">
+        <!-- Menu Mobile -->
+        <div class="lg:hidden bg-black text-gray-300 p-4 fixed top-0 w-full z-20">
+            <div class="flex justify-between items-center">
+                <img src="images/logo-branca.png" alt="Brasil em Dobro" class="h-8 w-auto">
+                <button id="menuButton" class="text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
+                    </svg>
+                </button>
+            </div>
+            <nav id="mobileMenu" class="hidden mt-4">
+                <a href="#" class="block py-2 text-gray-300 hover:bg-gray-800" id="lancamentoLinkMobile">
+                    Lançamento
+                </a>
+                <a href="#" class="block py-2 text-gray-300 hover:bg-gray-800" id="resultadoLinkMobile">
+                    Resultado
+                </a>
+                <a href="#" class="block py-2 text-gray-300 hover:bg-gray-800" id="consolidadoLinkMobile">
+                    Consolidado
+                </a>
+                <a href="#" class="block py-2 text-gray-300 hover:bg-gray-800" id="configLinkMobile">
+                    Configurações
+                </a>
+            </nav>
+        </div>
+
+        <div class="min-h-screen flex">
+            <!-- Menu Desktop -->
+            <aside class="hidden lg:block fixed w-64 bg-black text-gray-300 h-screen">
+                <!-- Logo no topo -->
+                <div class="p-6 border-b border-gray-800 flex justify-center">
+                    <img src="images/logo-branca.png" alt="Brasil em Dobro" class="h-12 w-auto">
+                </div>
+
+                <!-- Menu Principal -->
+                <nav class="mt-6 px-4">
+                    <a href="#" class="flex items-center px-4 py-3 text-gray-300 hover:bg-gray-800 rounded-lg mb-2" id="lancamentoLink">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Lançamento</span>
+                    </a>
+
+                    <a href="#" class="flex items-center px-4 py-3 text-gray-300 hover:bg-gray-800 rounded-lg mb-2" id="resultadoLink">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        <span>Resultados</span>
+                    </a>
+
+                    <a href="#" class="flex items-center px-4 py-3 text-gray-300 hover:bg-gray-800 rounded-lg mb-2" id="consolidadoLink">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+                        </svg>
+                        <span>Consolidado</span>
+                    </a>
+                </nav>
+
+                <!-- Configurações no rodapé -->
+                <div class="absolute bottom-0 w-64 p-4">
+                    <a href="#" class="flex items-center px-4 py-3 text-gray-300 hover:bg-gray-800 rounded-lg" id="configLink">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span>Configurações</span>
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Espaçador para compensar a sidebar fixa -->
+            <div class="hidden lg:block w-64"></div>
+
+            <!-- Conteúdo Principal -->
+            <div class="flex-1">
+                <!-- Header -->
+                <header class="hidden lg:block bg-black fixed top-0 right-0 left-64 z-10">
+                    <div class="border-b border-gray-700">
+                        <div class="max-w-7xl mx-auto py-6 px-4 flex justify-between items-center">
+                            <div class="w-32"><!-- Espaçador à esquerda --></div>
+                            <h1 class="text-3xl font-bold text-white flex-1 text-center">Controle de Vendas</h1>
+                            <div class="w-32 flex justify-end"><!-- Container para o botão de logout -->
+                                <button id="logoutBtn" class="text-white hover:text-gray-300 flex items-center">
+                                    <span class="mr-2">Sair</span>
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Conteúdo das Telas -->
+                <main class="max-w-7xl mx-auto p-4 lg:pt-24 mt-16 lg:mt-0">
+                    <!-- Tela de Lançamento -->
+                    <div id="telaLancamento" class="bg-white p-4 lg:p-6 rounded-lg">
+                        <h2 class="text-2xl font-bold mb-6">Lançamento Diário</h2>
+                        <form id="formLancamento" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Cidade</label>
+                                    <select name="cidade" class="w-full p-2 border rounded">
+                                        <option value="">Selecione uma cidade</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Lote</label>
+                                    <select name="lote" class="w-full p-2 border rounded">
+                                        <option value="">Selecione um lote</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Data e Valor lado a lado -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Data</label>
+                                    <input type="date" name="data" class="w-full p-2 border rounded">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 mb-2">Valor Faturado</label>
+                                    <div class="relative">
+                                        <span class="absolute left-3 top-2 text-gray-600">R$</span>
+                                        <input 
+                                            type="text" 
+                                            name="valor" 
+                                            class="w-full p-2 pl-8 border rounded" 
+                                            placeholder="0,00"
+                                            onkeyup="formatarMoeda(this)"
+                                            onkeypress="return apenasNumeros(event)"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full lg:w-auto bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                Salvar Lançamento
+                            </button>
+                        </form>
+
+                        <!-- Relatório de Lançamentos -->
+                        <div class="mt-8">
+                            <h3 class="text-xl font-semibold mb-4">Lançamentos por Cidade</h3>
+                            <div id="relatorioLancamentos">
+                                <!-- Relatório será preenchido via JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tela de Resultado -->
+                    <div id="telaResultado" class="bg-white p-4 lg:p-6 rounded-lg hidden">
+                        <h2 class="text-2xl font-bold mb-6">FATURAMENTO POR CIDADE</h2>
+                        
+                        <!-- Container para os resultados -->
+                        <div id="resultadoContainer" class="space-y-8">
+                            <!-- O conteúdo será preenchido via JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Tela de Consolidado -->
+                    <div id="telaConsolidado" class="bg-white p-4 lg:p-6 rounded-lg hidden">
+                        <h2 class="text-2xl font-bold mb-6">CONSOLIDADO</h2>
+                        <div class="overflow-x-auto">
+                            <table id="tabelaConsolidado" class="min-w-full bg-white border">
+                                <!-- Tabela será preenchida via JavaScript -->
+                            </table>
+                        </div>
+                        <!-- Gráficos serão inseridos aqui via JavaScript -->
+                    </div>
+
+                    <!-- Tela de Configurações -->
+                    <div id="telaConfig" class="bg-white p-4 lg:p-6 rounded-lg hidden">
+                        <h2 class="text-2xl font-bold mb-6">Configurações do Sistema</h2>
+                        
+                        <!-- Accordion de Cidades -->
+                        <div class="mb-4">
+                            <button class="accordion-btn w-full bg-gray-100 hover:bg-gray-200 transition-colors p-4 rounded-lg flex justify-between items-center" onclick="toggleAccordion(this)">
+                                <span class="text-lg font-semibold">Gerenciar Cidades</span>
+                                <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content hidden mt-4 p-4 border rounded-lg">
+                                <form id="formCidade" class="space-y-4 mb-6">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2">Nome da Cidade</label>
+                                        <input type="text" name="nome_cidade" class="w-full p-2 border rounded" required>
+                                    </div>
+                                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                        Cadastrar Cidade
+                                    </button>
+                                </form>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white border">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="py-2 px-4 border-b text-left">ID</th>
+                                                <th class="py-2 px-4 border-b text-left">Nome</th>
+                                                <th class="py-2 px-4 border-b text-left">Data Cadastro</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaCidades"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion de Lotes -->
+                        <div class="mb-4">
+                            <button class="accordion-btn w-full bg-gray-100 hover:bg-gray-200 transition-colors p-4 rounded-lg flex justify-between items-center" onclick="toggleAccordion(this)">
+                                <span class="text-lg font-semibold">Gerenciar Lotes</span>
+                                <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content hidden mt-4 p-4 border rounded-lg">
+                                <form id="formLote" class="space-y-4 mb-6">
+                                    <div>
+                                        <label class="block text-gray-700 mb-2">Número do Lote</label>
+                                        <input type="text" name="numero_lote" class="w-full p-2 border rounded" required>
+                                    </div>
+                                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                        Cadastrar Lote
+                                    </button>
+                                </form>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white border">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="py-2 px-4 border-b text-left">ID</th>
+                                                <th class="py-2 px-4 border-b text-left">Número</th>
+                                                <th class="py-2 px-4 border-b text-left">Data Cadastro</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaLotes"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Accordion de Usuários -->
+                        <div class="mb-4">
+                            <button class="accordion-btn w-full bg-gray-100 hover:bg-gray-200 transition-colors p-4 rounded-lg flex justify-between items-center" onclick="toggleAccordion(this)">
+                                <span class="text-lg font-semibold">Gerenciar Usuários</span>
+                                <svg class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div class="accordion-content hidden mt-4 p-4 border rounded-lg">
+                                <form id="formUsuario" class="space-y-4 mb-6">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-gray-700 mb-2">Nome</label>
+                                            <input type="text" name="nome_usuario" class="w-full p-2 border rounded" required>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-700 mb-2">Email</label>
+                                            <input type="email" name="email_usuario" class="w-full p-2 border rounded" required>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-700 mb-2">Senha</label>
+                                            <input type="password" name="senha_usuario" class="w-full p-2 border rounded" required>
+                                        </div>
+                                        <div>
+                                            <label class="block text-gray-700 mb-2">Tipo</label>
+                                            <select name="tipo_usuario" class="w-full p-2 border rounded">
+                                                <option value="usuario">Usuário</option>
+                                                <option value="admin">Administrador</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                        Cadastrar Usuário
+                                    </button>
+                                </form>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white border">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="py-2 px-4 border-b text-left">Nome</th>
+                                                <th class="py-2 px-4 border-b text-left">Email</th>
+                                                <th class="py-2 px-4 border-b text-left">Tipo</th>
+                                                <th class="py-2 px-4 border-b text-left">Status</th>
+                                                <th class="py-2 px-4 border-b text-left">Data Cadastro</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabelaUsuarios"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script do menu mobile -->
+    <script>
+        document.getElementById('menuButton').addEventListener('click', function() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        });
+
+        // Fecha o menu ao clicar em um link
+        document.querySelectorAll('#mobileMenu a').forEach(link => {
+            link.addEventListener('click', function() {
+                document.getElementById('mobileMenu').classList.add('hidden');
+            });
+        });
+    </script>
+
+    <script src="/js/api.js"></script>
+
+    <!-- Ajuste o CSS dos gráficos -->
+    <style>
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+        
+        @media (max-width: 640px) {
+            .overflow-x-auto {
+                margin-left: -1rem;
+                margin-right: -1rem;
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+    </style>
+
+    <!-- Adicione este script no final do arquivo, antes do </body> -->
+    <script>
+    function toggleAccordion(button) {
+        // Previne o comportamento padrão do botão
+        event.preventDefault();
+        
+        // Pega o conteúdo associado ao botão
+        const content = button.nextElementSibling;
+        const icon = button.querySelector('svg');
+        
+        // Toggle da classe hidden com animação
+        if (content.classList.contains('hidden')) {
+            // Abre o accordion
+            content.classList.remove('hidden');
+            content.style.maxHeight = '0';
+            setTimeout(() => {
+                content.style.maxHeight = content.scrollHeight + 'px';
+            }, 10);
+            icon.classList.add('rotate-180');
+        } else {
+            // Fecha o accordion
+            content.style.maxHeight = '0';
+            icon.classList.remove('rotate-180');
+            setTimeout(() => {
+                content.classList.add('hidden');
+            }, 300);
+        }
+    }
+    </script>
+
+    <style>
+    .accordion-content {
+        transition: max-height 0.3s ease-out;
+        overflow: hidden;
+    }
+
+    .accordion-btn svg {
+        transition: transform 0.3s ease;
+    }
+    </style>
+
+    <div id="notificationContainer"></div>
+
+    <!-- Adicione este template de paginação após cada tabela -->
+    <div class="pagination-controls flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+        <div class="flex flex-1 justify-between sm:hidden">
+            <button class="btn-prev relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                Anterior
+            </button>
+            <button class="btn-next relative ml-3 inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                Próxima
+            </button>
+        </div>
+        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Mostrando <span class="font-medium page-start">1</span> até <span class="font-medium page-end">10</span> de
+                    <span class="font-medium total-items">20</span> resultados
+                </p>
+            </div>
+            <div>
+                <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button class="btn-prev relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                        <span class="sr-only">Anterior</span>
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <div class="page-numbers flex"></div>
+                    <button class="btn-next relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+                        <span class="sr-only">Próxima</span>
+                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
