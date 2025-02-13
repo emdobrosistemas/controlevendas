@@ -5,9 +5,12 @@ const db = require('../db/connection');
 // Listar todas as cidades
 router.get('/', async (req, res) => {
     try {
+        console.log('Requisição de cidades recebida');
         const [rows] = await db.query('SELECT * FROM cidades ORDER BY nome');
+        console.log(`${rows.length} cidades encontradas`);
         res.json(rows);
     } catch (error) {
+        console.error('Erro ao buscar cidades:', error);
         res.status(500).json({ error: error.message });
     }
 });

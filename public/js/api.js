@@ -5,23 +5,29 @@ let currentPage = 1;
 
 // Função para mostrar notificações
 function showNotification(message, type = 'success') {
-    const container = document.getElementById('notificationContainer');
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    container.appendChild(notification);
-    
-    // Força um reflow para a animação funcionar
-    notification.offsetHeight;
-    notification.classList.add('show');
-    
-    setTimeout(() => {
-        notification.classList.remove('show');
+    return new Promise((resolve) => {
+        const container = document.getElementById('notificationContainer');
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        container.appendChild(notification);
+        
+        // Força um reflow para a animação funcionar
+        notification.offsetHeight;
+        notification.classList.add('show');
+        
+        // Remove a notificação após o tempo definido
         setTimeout(() => {
-            container.removeChild(notification);
-        }, 300);
-    }, 3000);
+            notification.classList.remove('show');
+            notification.addEventListener('transitionend', () => {
+                if (container.contains(notification)) {
+                    container.removeChild(notification);
+                }
+                resolve(); // Resolve a promise após a animação terminar
+            }, { once: true });
+        }, 2000);
+    });
 }
 
 // Função para verificar timeout da sessão
@@ -83,23 +89,49 @@ function converterParaNumero(valor) {
 // Carregar cidades e lotes nos selects
 async function carregarDados() {
     try {
-        const [cidades, lotes] = await Promise.all([
-            fetch(`${API_URL}/cidades`).then(res => res.json()),
-            fetch(`${API_URL}/lotes`).then(res => res.json())
+        console.log('Iniciando carregamento de dados...');
+        
+        // Faz as requisições em paralelo
+        const [cidadesResponse, lotesResponse] = await Promise.all([
+            fetch(`${API_URL}/cidades`),
+            fetch(`${API_URL}/lotes`)
         ]);
 
+        if (!cidadesResponse.ok || !lotesResponse.ok) {
+            throw new Error('Erro ao carregar dados');
+        }
+
+        const [cidades, lotes] = await Promise.all([
+            cidadesResponse.json(),
+            lotesResponse.json()
+        ]);
+
+        console.log('Dados carregados:', { cidades: cidades.length, lotes: lotes.length });
+
+        // Pega as referências dos selects uma única vez
         const cidadeSelect = document.querySelector('select[name="cidade"]');
         const loteSelect = document.querySelector('select[name="lote"]');
 
-        cidades.forEach(cidade => {
-            cidadeSelect.innerHTML += `<option value="${cidade.id}">${cidade.nome}</option>`;
-        });
+        if (cidadeSelect) {
+            cidadeSelect.innerHTML = '<option value="">Selecione a cidade</option>';
+            cidades.forEach(cidade => {
+                cidadeSelect.innerHTML += `<option value="${cidade.id}">${cidade.nome}</option>`;
+            });
+        }
 
-        lotes.forEach(lote => {
-            loteSelect.innerHTML += `<option value="${lote.id}">${lote.numero}</option>`;
-        });
+        if (loteSelect) {
+            loteSelect.innerHTML = '<option value="">Selecione o lote</option>';
+            lotes.forEach(lote => {
+                loteSelect.innerHTML += `<option value="${lote.id}">${lote.numero}</option>`;
+            });
+        }
+
+        console.log('Selects atualizados');
+        return { cidades, lotes };
+
     } catch (error) {
         console.error('Erro ao carregar dados:', error);
+        throw error;
     }
 }
 
@@ -133,8 +165,13 @@ async function carregarTabelas() {
                 <td class="py-2 px-4 border-b">${formatarData(lote.created_at)}</td>
             </tr>
         `).join('');
+
+        // Carregar usuários
+        await carregarUsuarios();
+
     } catch (error) {
         console.error('Erro ao carregar tabelas:', error);
+        showNotification('Erro ao carregar tabelas', 'error');
     }
 }
 
@@ -907,269 +944,210 @@ async function carregarConsolidado() {
     }
 }
 
-// Adicione os event listeners para o menu mobile
-document.getElementById('lancamentoLinkMobile').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.remove('hidden');
-    document.getElementById('telaConfig').classList.add('hidden');
-    document.getElementById('telaResultado').classList.add('hidden');
-    document.getElementById('telaConsolidado').classList.add('hidden');
-    carregarRelatorio();
-});
+// Atualizar a função para ajustar layout
+function ajustarLayoutPaginas() {
+    // Remove a paginação do rodapé das telas específicas
+    const telas = ['telaConsolidado', 'telaResultado'];
+    
+    telas.forEach(telaId => {
+        const tela = document.getElementById(telaId);
+        if (tela) {
+            // Seleciona apenas a paginação do rodapé (última do documento)
+            const paginacoes = tela.querySelectorAll('.pagination-controls');
+            if (paginacoes.length > 0) {
+                // Remove apenas a última paginação (a do rodapé)
+                paginacoes[paginacoes.length - 1].remove();
+            }
+        }
+    });
+}
 
-document.getElementById('resultadoLinkMobile').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.add('hidden');
-    document.getElementById('telaConfig').classList.add('hidden');
-    document.getElementById('telaResultado').classList.remove('hidden');
-    document.getElementById('telaConsolidado').classList.add('hidden');
-    carregarResultados();
-});
+// Adicionar função para remover paginação do rodapé
+function removerPaginacaoRodape() {
+    // Seleciona todas as paginações que estão no nível do documento
+    const paginacoesRodape = document.querySelectorAll('body > .pagination-controls');
+    paginacoesRodape.forEach(paginacao => paginacao.remove());
+}
 
-document.getElementById('consolidadoLinkMobile').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.add('hidden');
-    document.getElementById('telaConfig').classList.add('hidden');
-    document.getElementById('telaResultado').classList.add('hidden');
-    document.getElementById('telaConsolidado').classList.remove('hidden');
-    carregarConsolidado();
-});
-
-document.getElementById('configLinkMobile').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.add('hidden');
-    document.getElementById('telaConfig').classList.remove('hidden');
-    document.getElementById('telaResultado').classList.add('hidden');
-    document.getElementById('telaConsolidado').classList.add('hidden');
-    carregarTabelas();
-});
-
-// Atualize os outros event listeners para incluir a nova tela
-document.getElementById('lancamentoLink').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.remove('hidden');
-    document.getElementById('telaConfig').classList.add('hidden');
-    document.getElementById('telaResultado').classList.add('hidden');
-    document.getElementById('telaConsolidado').classList.add('hidden');
-    carregarRelatorio();
-});
-
-document.getElementById('resultadoLink').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.add('hidden');
-    document.getElementById('telaConfig').classList.add('hidden');
-    document.getElementById('telaResultado').classList.remove('hidden');
-    document.getElementById('telaConsolidado').classList.add('hidden');
-    carregarResultados();
-});
-
-document.getElementById('configLink').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.add('hidden');
-    document.getElementById('telaConfig').classList.remove('hidden');
-    document.getElementById('telaResultado').classList.add('hidden');
-    document.getElementById('telaConsolidado').classList.add('hidden');
-    carregarTabelas();
-});
-
-// Adicione o event listener para o consolidado
-document.getElementById('consolidadoLink').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('telaLancamento').classList.add('hidden');
-    document.getElementById('telaConfig').classList.add('hidden');
-    document.getElementById('telaResultado').classList.add('hidden');
-    document.getElementById('telaConsolidado').classList.remove('hidden');
-    carregarConsolidado();
-});
-
-// Atualize o carregamento inicial
 document.addEventListener('DOMContentLoaded', () => {
+    // Remove paginação do rodapé imediatamente
+    removerPaginacaoRodape();
+    
     // Verifica autenticação
-    const usuario = localStorage.getItem('usuario');
+    const usuario = JSON.parse(localStorage.getItem('usuario'));
     
     if (usuario) {
+        // Remove a classe bg-black do body e adiciona bg-white
+        document.body.classList.remove('bg-black');
+        document.body.classList.add('bg-white');
+
+        // Esconde a tela de login
         document.getElementById('telaLogin').classList.add('hidden');
         document.getElementById('sistema').classList.remove('hidden');
+
+        // Esconde todas as telas primeiro
+        const telas = ['telaLancamento', 'telaResultado', 'telaConsolidado', 'telaConfig'];
+        telas.forEach(tela => {
+            document.getElementById(tela)?.classList.add('hidden');
+        });
+
+        // Atualiza menus e mostra tela inicial
+        verificarPermissoes();
         
-        // Carrega dados iniciais
-        Promise.all([
-            carregarDados(),
-            carregarTabelas(),
-            carregarRelatorio(),
-            carregarResultados(),
-            carregarConsolidado()
-        ]);
+        // Mostra e carrega apenas a tela inicial apropriada
+        if (usuario.tipo === 'admin') {
+            document.getElementById('telaLancamento').classList.remove('hidden');
+            carregarRelatorio();
+        } else {
+            document.getElementById('telaResultado').classList.remove('hidden');
+            carregarResultados();
+        }
+
+        // Carrega dados básicos apenas uma vez
+        carregarDados();
+
+        // Ajusta o layout após o carregamento inicial
+        setTimeout(ajustarLayoutPaginas, 100);
     }
 
-    // Event Listeners do Menu Desktop
-    document.getElementById('lancamentoLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.remove('hidden');
-        document.getElementById('telaConfig').classList.add('hidden');
-        document.getElementById('telaResultado').classList.add('hidden');
-        document.getElementById('telaConsolidado').classList.add('hidden');
-        carregarRelatorio();
+    // Configuração dos event listeners de navegação
+    const menuLinks = {
+        'lancamentoLink': 'telaLancamento',
+        'resultadoLink': 'telaResultado',
+        'consolidadoLink': 'telaConsolidado',
+        'configLink': 'telaConfig',
+        'lancamentoLinkMobile': 'telaLancamento',
+        'resultadoLinkMobile': 'telaResultado',
+        'consolidadoLinkMobile': 'telaConsolidado',
+        'configLinkMobile': 'telaConfig'
+    };
+
+    // Event listeners para navegação
+    Object.entries(menuLinks).forEach(([linkId, telaId]) => {
+        const elemento = document.getElementById(linkId);
+        if (elemento) {
+            elemento.addEventListener('click', function(e) {
+                e.preventDefault();
+                const usuario = JSON.parse(localStorage.getItem('usuario'));
+                
+                if (!usuario) {
+                    showNotification('Sessão expirada. Por favor, faça login novamente.', 'error');
+                    return;
+                }
+
+                // Ajuste na lógica de permissões
+                const permissaoKey = linkId.replace('Link', '').replace('Mobile', '').toLowerCase();
+                const temPermissao = usuario.tipo === 'admin' || 
+                                   (usuario.tipo === 'usuario' && ['resultado', 'consolidado'].includes(permissaoKey));
+                
+                if (temPermissao) {
+                    // Esconde todas as telas
+                    Object.values(menuLinks).forEach(tela => {
+                        document.getElementById(tela)?.classList.add('hidden');
+                    });
+
+                    // Mostra a tela selecionada
+                    const tela = document.getElementById(telaId);
+                    if (tela) {
+                        tela.classList.remove('hidden');
+                        // Carrega os dados apenas quando necessário
+                        switch(telaId) {
+                            case 'telaLancamento':
+                                if (usuario.tipo === 'admin') {
+                                    carregarRelatorio();
+                                }
+                                break;
+                            case 'telaResultado':
+                                carregarResultados();
+                                break;
+                            case 'telaConsolidado':
+                                carregarConsolidado();
+                                ajustarLayoutPaginas();
+                                break;
+                            case 'telaConfig':
+                                if (usuario.tipo === 'admin') {
+                                    carregarTabelas();
+                                }
+                                break;
+                        }
+                    }
+                } else {
+                    showNotification('Você não tem permissão para acessar esta área', 'error');
+                }
+            });
+        }
     });
 
-    document.getElementById('resultadoLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.add('hidden');
-        document.getElementById('telaConfig').classList.add('hidden');
-        document.getElementById('telaResultado').classList.remove('hidden');
-        document.getElementById('telaConsolidado').classList.add('hidden');
-        carregarResultados();
-    });
+    // Event listener único para o formulário de lançamento
+    const formLancamento = document.getElementById('formLancamento');
+    if (formLancamento) {
+        formLancamento.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const cidade = e.target.cidade.value;
+            const lote = e.target.lote.value;
+            const data = e.target.data.value;
+            const valor = e.target.valor.value;
 
-    document.getElementById('consolidadoLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.add('hidden');
-        document.getElementById('telaConfig').classList.add('hidden');
-        document.getElementById('telaResultado').classList.add('hidden');
-        document.getElementById('telaConsolidado').classList.remove('hidden');
-        carregarConsolidado();
-    });
+            if (!cidade || !lote || !data || !valor) {
+                showNotification('Por favor, preencha todos os campos.', 'error');
+                return;
+            }
 
-    document.getElementById('configLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.add('hidden');
-        document.getElementById('telaConfig').classList.remove('hidden');
-        document.getElementById('telaResultado').classList.add('hidden');
-        document.getElementById('telaConsolidado').classList.add('hidden');
-        carregarTabelas();
-    });
-
-    // Event Listeners do Menu Mobile
-    document.getElementById('lancamentoLinkMobile').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.remove('hidden');
-        document.getElementById('telaConfig').classList.add('hidden');
-        document.getElementById('telaResultado').classList.add('hidden');
-        document.getElementById('telaConsolidado').classList.add('hidden');
-        carregarRelatorio();
-    });
-
-    document.getElementById('resultadoLinkMobile').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.add('hidden');
-        document.getElementById('telaConfig').classList.add('hidden');
-        document.getElementById('telaResultado').classList.remove('hidden');
-        document.getElementById('telaConsolidado').classList.add('hidden');
-        carregarResultados();
-    });
-
-    document.getElementById('consolidadoLinkMobile').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.add('hidden');
-        document.getElementById('telaConfig').classList.add('hidden');
-        document.getElementById('telaResultado').classList.add('hidden');
-        document.getElementById('telaConsolidado').classList.remove('hidden');
-        carregarConsolidado();
-    });
-
-    document.getElementById('configLinkMobile').addEventListener('click', function(e) {
-        e.preventDefault();
-        document.getElementById('telaLancamento').classList.add('hidden');
-        document.getElementById('telaConfig').classList.remove('hidden');
-        document.getElementById('telaResultado').classList.add('hidden');
-        document.getElementById('telaConsolidado').classList.add('hidden');
-        carregarTabelas();
-    });
-
-    // Event Listeners dos Formulários
-    document.getElementById('formLogin').addEventListener('submit', fazerLogin);
-    document.getElementById('formCidade').addEventListener('submit', cadastrarCidade);
-    document.getElementById('formLote').addEventListener('submit', cadastrarLote);
-    document.getElementById('formLancamento').addEventListener('submit', cadastrarLancamento);
-    document.getElementById('logoutBtn').addEventListener('click', fazerLogout);
-
-    // Event Listener do Menu Mobile Toggle
-    document.getElementById('menuButton').addEventListener('click', function() {
-        document.getElementById('mobileMenu').classList.toggle('hidden');
-    });
-
-    // Fecha o menu ao clicar em um link
-    document.querySelectorAll('#mobileMenu a').forEach(link => {
-        link.addEventListener('click', function() {
-            document.getElementById('mobileMenu').classList.add('hidden');
+            try {
+                await cadastrarLancamento(e);
+                showNotification('Lançamento cadastrado com sucesso!');
+                e.target.reset();
+                e.target.valor.value = '0,00';
+                await carregarRelatorio(); // Recarrega apenas uma vez
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
         });
-    });
+    }
 
-    // Adicionar validações nos formulários
-    document.getElementById('formCidade').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const nome = e.target.nome_cidade.value.trim();
-        
-        if (!nome) {
-            showNotification('Por favor, insira o nome da cidade.', 'error');
-            return;
-        }
-
-        try {
-            await cadastrarCidade(e);
-            showNotification('Cidade cadastrada com sucesso!');
-            e.target.reset();
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
-    });
-
-    document.getElementById('formLote').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const numero = e.target.numero_lote.value.trim();
-        
-        if (!numero) {
-            showNotification('Por favor, insira o número do lote.', 'error');
-            return;
-        }
-
-        try {
-            await cadastrarLote(e);
-            showNotification('Lote cadastrado com sucesso!');
-            e.target.reset();
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
-    });
-
-    document.getElementById('formLancamento').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const cidade = e.target.cidade.value;
-        const lote = e.target.lote.value;
-        const data = e.target.data.value;
-        const valor = e.target.valor.value;
-
-        if (!cidade || !lote || !data || !valor) {
-            showNotification('Por favor, preencha todos os campos.', 'error');
-            return;
-        }
-
-        try {
-            await cadastrarLancamento(e);
-            showNotification('Lançamento cadastrado com sucesso!');
-            e.target.reset();
-            e.target.valor.value = '0,00';
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
-    });
-
+    // Outros event listeners únicos
+    document.getElementById('formUsuario')?.addEventListener('submit', cadastrarUsuario);
+    
     // Verificar sessão a cada minuto
     setInterval(checkSessionTimeout, 60000);
-});
 
-// Funções de autenticação
-async function fazerLogin(event) {
-    event.preventDefault();
-    const email = document.querySelector('input[name="email"]').value;
-    const senha = document.querySelector('input[name="senha"]').value;
-
-    // Validação básica
-    if (!email || !senha) {
-        showNotification('Por favor, preencha todos os campos.', 'error');
-        return;
+    // Adiciona event listener para o botão de logout
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            fazerLogout();
+        });
     }
 
+    // Adiciona event listener para o botão de logout mobile (se existir)
+    const logoutBtnMobile = document.getElementById('logoutBtnMobile');
+    if (logoutBtnMobile) {
+        logoutBtnMobile.addEventListener('click', (e) => {
+            e.preventDefault();
+            fazerLogout();
+        });
+    }
+
+    // Adiciona o event listener para o formulário de login
+    const formLogin = document.getElementById('formLogin');
+    if (formLogin) {
+        formLogin.addEventListener('submit', fazerLogin);
+    }
+
+    // Verifica e carrega o estado inicial
+    verificarEstadoInicial();
+});
+
+// Atualizar a função de login
+async function fazerLogin(event) {
+    event.preventDefault();
+    
     try {
+        const form = event.target;
+        const email = form.email.value;
+        const senha = form.senha.value;
+
         const response = await fetch(`${API_URL}/usuarios/login`, {
             method: 'POST',
             headers: {
@@ -1178,42 +1156,110 @@ async function fazerLogin(event) {
             body: JSON.stringify({ email, senha })
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao fazer login');
+            throw new Error(data.error || 'Erro ao fazer login');
         }
 
-        const userData = await response.json();
-        localStorage.setItem('usuario', JSON.stringify(userData));
+        // Armazena os dados do usuário
+        localStorage.setItem('usuario', JSON.stringify(data));
         localStorage.setItem('lastActivity', Date.now().toString());
+
+        // Remove qualquer estilo inline antes do reload
+        document.body.removeAttribute('style');
+
+        // Remove paginação antes do reload
+        removerPaginacaoRodape();
         
-        document.getElementById('telaLogin').classList.add('hidden');
-        document.getElementById('sistema').classList.remove('hidden');
-        
-        showNotification(`Bem-vindo, ${userData.nome}!`);
-        
-        await Promise.all([
-            carregarDados(),
-            carregarTabelas(),
-            carregarRelatorio(),
-            carregarResultados(),
-            carregarConsolidado()
-        ]);
+        // Força uma recarga completa da página após o login
+        window.location.reload(true);
 
     } catch (error) {
-        showNotification(error.message, 'error');
+        console.error('Erro no login:', error);
+        showNotification(error.message || 'Erro ao fazer login', 'error');
     }
 }
 
-function fazerLogout() {
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('lastActivity');
+// Atualizar a função verificarEstadoInicial
+async function verificarEstadoInicial() {
+    const usuario = JSON.parse(localStorage.getItem('usuario'));
     
-    document.getElementById('telaLogin').classList.remove('hidden');
-    document.getElementById('sistema').classList.add('hidden');
-    document.getElementById('formLogin').reset();
-    
-    showNotification('Você saiu do sistema com sucesso.');
+    if (usuario) {
+        // Remove qualquer estilo inline do body
+        document.body.removeAttribute('style');
+        
+        // Remove a classe bg-black e adiciona bg-white
+        document.body.classList.remove('bg-black');
+        document.body.classList.add('bg-white');
+
+        // Esconde a tela de login
+        document.getElementById('telaLogin').classList.add('hidden');
+        
+        // Mostra o sistema
+        document.getElementById('sistema').classList.remove('hidden');
+        
+        // Esconde todas as telas primeiro
+        const telas = ['telaLancamento', 'telaResultado', 'telaConsolidado', 'telaConfig'];
+        telas.forEach(tela => {
+            document.getElementById(tela)?.classList.add('hidden');
+        });
+
+        // Atualiza menus e mostra tela inicial
+        verificarPermissoes();
+        
+        // Mostra a tela correta
+        const telaInicial = usuario.tipo === 'admin' ? 'telaLancamento' : 'telaResultado';
+        document.getElementById(telaInicial)?.classList.remove('hidden');
+
+        // Carrega os dados necessários
+        try {
+            await carregarDados();
+            if (usuario.tipo === 'admin') {
+                await carregarRelatorio();
+            } else {
+                await carregarResultados();
+            }
+        } catch (error) {
+            console.error('Erro ao carregar dados iniciais:', error);
+        }
+    } else {
+        // Se não houver usuário, garante que o fundo está preto
+        document.body.removeAttribute('style'); // Remove estilo inline
+        document.body.classList.remove('bg-white');
+        document.body.classList.add('bg-black');
+    }
+}
+
+// Atualizar a função fazerLogout
+async function fazerLogout() {
+    try {
+        // Limpa os dados do localStorage
+        localStorage.removeItem('usuario');
+        localStorage.removeItem('lastActivity');
+        
+        // Esconde todas as telas do sistema
+        document.getElementById('telaLancamento').classList.add('hidden');
+        document.getElementById('telaResultado').classList.add('hidden');
+        document.getElementById('telaConsolidado').classList.add('hidden');
+        document.getElementById('telaConfig').classList.add('hidden');
+        
+        // Mostra a tela de login
+        document.getElementById('sistema').classList.add('hidden');
+        document.getElementById('telaLogin').classList.remove('hidden');
+        
+        // Altera o fundo para preto
+        document.body.classList.remove('bg-white');
+        document.body.classList.add('bg-black');
+        
+        // Limpa os formulários
+        document.getElementById('formLogin')?.reset();
+        
+        // Mostra notificação
+        await showNotification('Logout realizado com sucesso');
+    } catch (error) {
+        console.error('Erro ao fazer logout:', error);
+    }
 }
 
 // Adicionar verificação de sessão em todas as requisições
@@ -1223,4 +1269,341 @@ window.fetch = function(...args) {
         return Promise.reject(new Error('Sessão expirada'));
     }
     return originalFetch.apply(this, args);
-}; 
+};
+
+// Função para carregar usuários
+async function carregarUsuarios() {
+    const tabelaUsuarios = document.getElementById('tabelaUsuarios');
+    if (!tabelaUsuarios) {
+        console.error('Elemento tabelaUsuarios não encontrado');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/usuarios`);
+        if (!response.ok) {
+            throw new Error('Erro ao carregar usuários');
+        }
+
+        const usuarios = await response.json();
+        
+        if (!Array.isArray(usuarios)) {
+            throw new Error('Formato de dados inválido');
+        }
+
+        tabelaUsuarios.innerHTML = usuarios.map(usuario => {
+            return `
+                <tr class="hover:bg-gray-50" id="usuario-${usuario.id}">
+                    <td class="py-2 px-4 border-b">
+                        <span class="valor-display">${usuario.nome}</span>
+                        <input type="text" class="valor-edit hidden w-full p-1 border rounded" 
+                            value="${usuario.nome}" style="display: none;">
+                    </td>
+                    <td class="py-2 px-4 border-b">
+                        <span class="valor-display">${usuario.email}</span>
+                        <input type="email" class="valor-edit hidden w-full p-1 border rounded" 
+                            value="${usuario.email}" style="display: none;">
+                    </td>
+                    <td class="py-2 px-4 border-b">
+                        <span class="valor-display">${usuario.tipo}</span>
+                        <select class="valor-edit hidden w-full p-1 border rounded" style="display: none;">
+                            <option value="usuario" ${usuario.tipo === 'usuario' ? 'selected' : ''}>Usuário</option>
+                            <option value="admin" ${usuario.tipo === 'admin' ? 'selected' : ''}>Administrador</option>
+                        </select>
+                    </td>
+                    <td class="py-2 px-4 border-b">
+                        <span class="valor-display">********</span>
+                        <input type="password" class="valor-edit hidden w-full p-1 border rounded" 
+                            placeholder="Nova senha" style="display: none;">
+                    </td>
+                    <td class="py-2 px-4 border-b">${formatarData(usuario.created_at)}</td>
+                    <td class="py-2 px-4 border-b text-center">
+                        <div class="flex justify-center space-x-2">
+                            <button onclick="editarUsuario(${usuario.id})" 
+                                class="edit-btn text-blue-600 hover:text-blue-800">
+                                Editar
+                            </button>
+                            ${usuario.tipo !== 'admin' ? 
+                                `<button onclick="deletarUsuario(${usuario.id})" 
+                                    class="delete-btn text-red-600 hover:text-red-800">
+                                    Deletar
+                                </button>` 
+                                : ''
+                            }
+                            <button onclick="salvarEdicaoUsuario(${usuario.id})" 
+                                class="save-btn hidden text-green-600 hover:text-green-800">
+                                Salvar
+                            </button>
+                            <button onclick="cancelarEdicaoUsuario(${usuario.id})" 
+                                class="cancel-btn hidden text-red-600 hover:text-red-800">
+                                Cancelar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+        showNotification('Erro ao carregar usuários: ' + error.message, 'error');
+        
+        // Mostra uma mensagem na tabela quando há erro
+        tabelaUsuarios.innerHTML = `
+            <tr>
+                <td colspan="6" class="py-4 text-center text-red-600">
+                    Erro ao carregar usuários. Por favor, tente novamente.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Atualizar a função deletarUsuario
+async function deletarUsuario(id) {
+    try {
+        if (!confirm('Tem certeza que deseja deletar este usuário?')) {
+            return;
+        }
+
+        console.log('Tentando deletar usuário:', id); // Log para debug
+
+        const response = await fetch(`${API_URL}/usuarios/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('Status da resposta:', response.status); // Log para debug
+
+        const data = await response.json().catch(() => null);
+        console.log('Dados da resposta:', data); // Log para debug
+
+        if (!response.ok) {
+            throw new Error(data?.error || 'Erro ao deletar usuário');
+        }
+
+        showNotification(data.message || 'Usuário deletado com sucesso!');
+        await carregarUsuarios(); // Recarrega a tabela
+    } catch (error) {
+        console.error('Erro ao deletar:', error);
+        showNotification(error.message || 'Erro ao deletar usuário', 'error');
+    }
+}
+
+// Adicionar funções para edição de usuário
+function editarUsuario(id) {
+    const row = document.getElementById(`usuario-${id}`);
+    
+    // Primeiro, copie os valores dos displays para os inputs
+    const nome = row.querySelector('.valor-display').textContent;
+    const email = row.querySelector('td:nth-child(2) .valor-display').textContent;
+    const tipo = row.querySelector('td:nth-child(3) .valor-display').textContent;
+    
+    // Configure os valores nos campos de edição
+    row.querySelector('input[type="text"]').value = nome;
+    row.querySelector('input[type="email"]').value = email;
+    row.querySelector('select').value = tipo.toLowerCase();
+    
+    // Mostre os campos de edição
+    row.querySelectorAll('.valor-edit').forEach(el => {
+        el.classList.remove('hidden');
+        el.style.display = '';
+    });
+    
+    // Esconda os displays
+    row.querySelectorAll('.valor-display').forEach(el => {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+    });
+    
+    // Atualize os botões
+    row.querySelector('.edit-btn').classList.add('hidden');
+    row.querySelector('.save-btn').classList.remove('hidden');
+    row.querySelector('.cancel-btn').classList.remove('hidden');
+}
+
+function cancelarEdicaoUsuario(id) {
+    const row = document.getElementById(`usuario-${id}`);
+    
+    // Mostre os displays
+    row.querySelectorAll('.valor-display').forEach(el => {
+        el.classList.remove('hidden');
+        el.style.display = '';
+    });
+    
+    // Esconda os campos de edição
+    row.querySelectorAll('.valor-edit').forEach(el => {
+        el.classList.add('hidden');
+        el.style.display = 'none';
+    });
+    
+    // Atualize os botões
+    row.querySelector('.edit-btn').classList.remove('hidden');
+    row.querySelector('.save-btn').classList.add('hidden');
+    row.querySelector('.cancel-btn').classList.add('hidden');
+}
+
+async function salvarEdicaoUsuario(id) {
+    const row = document.getElementById(`usuario-${id}`);
+    const nome = row.querySelector('input[type="text"]').value;
+    const email = row.querySelector('input[type="email"]').value;
+    const tipo = row.querySelector('select').value;
+    const senha = row.querySelector('input[type="password"]').value;
+
+    const dadosAtualizacao = {
+        nome,
+        email,
+        tipo
+    };
+
+    // Só inclui a senha se ela foi preenchida
+    if (senha) {
+        dadosAtualizacao.senha = senha;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/usuarios/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dadosAtualizacao)
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao atualizar usuário');
+        }
+
+        showNotification('Usuário atualizado com sucesso!');
+        await carregarUsuarios(); // Recarrega a tabela
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
+
+// Atualizar a função verificarPermissoes
+function verificarPermissoes() {
+    const usuario = JSON.parse(localStorage.getItem('usuario'));
+    if (!usuario) {
+        console.error('Usuário não encontrado no localStorage');
+        fazerLogout();
+        return;
+    }
+
+    // Define as permissões baseadas no tipo de usuário
+    const permissoes = {
+        admin: ['lancamento', 'resultado', 'consolidado', 'config'],
+        usuario: ['resultado', 'consolidado']
+    };
+
+    // Atualiza a visibilidade dos menus
+    const menus = {
+        lancamentoLink: 'lancamento',
+        resultadoLink: 'resultado',
+        consolidadoLink: 'consolidado',
+        configLink: 'config'
+    };
+
+    Object.entries(menus).forEach(([linkId, permissao]) => {
+        const link = document.getElementById(linkId);
+        const linkMobile = document.getElementById(`${linkId}Mobile`);
+        const temPermissao = usuario.tipo === 'admin' || 
+                            (usuario.tipo === 'usuario' && permissoes.usuario.includes(permissao));
+
+        if (link) link.style.display = temPermissao ? '' : 'none';
+        if (linkMobile) linkMobile.style.display = temPermissao ? '' : 'none';
+    });
+}
+
+// Atualizar a função cadastrarUsuario
+async function cadastrarUsuario(event) {
+    event.preventDefault();
+
+    // Desabilita o botão de submit para evitar múltiplos envios
+    const submitButton = event.target.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    
+    const formData = {
+        nome: event.target.nome_usuario.value.trim(),
+        email: event.target.email_usuario.value.trim(),
+        senha: event.target.senha_usuario.value,
+        tipo: event.target.tipo_usuario.value
+    };
+
+    try {
+        const response = await fetch(`${API_URL}/usuarios`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro ao cadastrar usuário');
+        }
+
+        // Limpa o formulário
+        event.target.reset();
+        
+        // Recarrega a tabela
+        await carregarUsuarios();
+
+        // Fecha o accordion imediatamente
+        const accordionContent = document.querySelector('.accordion-content');
+        const accordionButton = accordionContent?.previousElementSibling;
+        const icon = accordionButton?.querySelector('svg');
+        
+        if (accordionContent) {
+            accordionContent.classList.add('hidden');
+            accordionContent.style.maxHeight = null;
+            if (icon) {
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        // Mostra notificação de sucesso por último
+        showNotification('Usuário cadastrado com sucesso!');
+
+    } catch (error) {
+        console.error('Erro ao cadastrar usuário:', error);
+        showNotification(error.message, 'error');
+    } finally {
+        // Sempre reabilita o botão, mesmo em caso de erro
+        submitButton.disabled = false;
+    }
+}
+
+// Atualizar a função toggleAccordion
+function toggleAccordion(button) {
+    // Previne o comportamento padrão do botão
+    event.preventDefault();
+    
+    // Pega o conteúdo associado ao botão
+    const content = button.nextElementSibling;
+    const icon = button.querySelector('svg');
+    
+    // Toggle da classe hidden com animação
+    if (content.classList.contains('hidden')) {
+        // Abre o accordion
+        content.classList.remove('hidden');
+        content.style.maxHeight = '0';
+        requestAnimationFrame(() => {
+            content.style.maxHeight = content.scrollHeight + 'px';
+            icon.classList.add('rotate-180');
+        });
+    } else {
+        // Fecha o accordion
+        content.style.maxHeight = '0';
+        icon.classList.remove('rotate-180');
+        setTimeout(() => {
+            content.classList.add('hidden');
+            content.style.maxHeight = null;
+        }, 300);
+    }
+} 
