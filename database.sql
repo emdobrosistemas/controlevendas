@@ -49,3 +49,19 @@ CREATE TABLE permissoes (
 -- Atualize o INSERT do usuário admin com um hash bcrypt válido para a senha '123456'
 INSERT INTO usuarios (nome, email, senha, tipo) 
 VALUES ('Administrador', 'admin@admin.com', '123456', 'admin');
+
+-- Primeiro, vamos inserir as permissões do Administrador
+INSERT INTO permissoes (usuario_id, tela, pode_ver, pode_editar, pode_criar, pode_deletar)
+VALUES 
+
+-- Permissões para Administrador (usuario_id = 1)
+(1, 'lancamentos', true, true, true, true),
+(1, 'resultados', true, true, true, true),
+(1, 'consolidado', true, true, true, true),
+(1, 'configuracoes', true, true, true, true),
+
+-- Permissões para Usuário comum (usuario_id = 2)
+(2, 'lancamentos', false, false, false, false),
+(2, 'resultados', true, false, false, false),
+(2, 'consolidado', true, false, false, false),
+(2, 'configuracoes', false, false, false, false);
