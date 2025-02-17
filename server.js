@@ -6,8 +6,13 @@ const db = require('./db/connection');
 
 const app = express();
 
-// Middlewares
-app.use(cors());
+// Configuração do CORS
+app.use(cors({
+    origin: '*', // Em produção, você deve especificar o domínio exato
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Adicione este middleware antes das rotas
@@ -23,10 +28,10 @@ app.use('/api', (req, res, next) => {
 });
 
 // Rotas da API
+app.use('/api/usuarios', require('./routes/usuarioRoutes'));
 app.use('/api/cidades', require('./routes/cidadeRoutes'));
 app.use('/api/lotes', require('./routes/loteRoutes'));
 app.use('/api/lancamentos', require('./routes/lancamentoRoutes'));
-app.use('/api/usuarios', require('./routes/usuarioRoutes'));
 
 // Tratamento de erros para rotas da API
 app.use('/api', (err, req, res, next) => {
@@ -53,7 +58,7 @@ db.query('SELECT 1')
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
     console.log('Variáveis de ambiente carregadas:', {
         DB_HOST: process.env.DB_HOST,
         DB_USER: process.env.DB_USER,

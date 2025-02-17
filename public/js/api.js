@@ -1143,12 +1143,11 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fazerLogin(event) {
     event.preventDefault();
     
+    const email = event.target.email.value;
+    const senha = event.target.senha.value;
+    
     try {
-        const form = event.target;
-        const email = form.email.value;
-        const senha = form.senha.value;
-
-        const response = await fetch(`${API_URL}/usuarios/login`, {
+        const response = await fetch(`${window.location.origin}/api/usuarios/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1156,28 +1155,41 @@ async function fazerLogin(event) {
             body: JSON.stringify({ email, senha })
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.error || 'Erro ao fazer login');
+            const error = await response.json();
+            throw new Error(error.error || 'Erro ao fazer login');
         }
 
-        // Armazena os dados do usuário
+        const data = await response.json();
+        
+        // Salva os dados do usuário no localStorage
         localStorage.setItem('usuario', JSON.stringify(data));
         localStorage.setItem('lastActivity', Date.now().toString());
-
-        // Remove qualquer estilo inline antes do reload
-        document.body.removeAttribute('style');
-
-        // Remove paginação antes do reload
-        removerPaginacaoRodape();
         
-        // Força uma recarga completa da página após o login
-        window.location.reload(true);
-
+        // Atualiza a interface
+        document.getElementById('telaLogin').classList.add('hidden');
+        document.getElementById('sistema').classList.remove('hidden');
+        
+        // Remove a classe bg-black do body e adiciona bg-white
+        document.body.classList.remove('bg-black');
+        document.body.classList.add('bg-white');
+        
+        // Verifica permissões e carrega dados iniciais
+        verificarPermissoes();
+        
+        if (data.tipo === 'admin') {
+            document.getElementById('telaLancamento').classList.remove('hidden');
+            await carregarRelatorio();
+        } else {
+            document.getElementById('telaResultado').classList.remove('hidden');
+            await carregarResultados();
+        }
+        
+        showNotification('Login realizado com sucesso!');
+        
     } catch (error) {
         console.error('Erro no login:', error);
-        showNotification(error.message || 'Erro ao fazer login', 'error');
+        showNotification(error.message, 'error');
     }
 }
 
