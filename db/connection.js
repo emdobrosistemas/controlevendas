@@ -1,21 +1,17 @@
 const mysql = require('mysql2/promise');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config();
 
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'app_user',
-    password: process.env.DB_PASSWORD || 'iJulio@1700',
-    database: process.env.DB_DATABASE || 'controle_vendas',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_DATABASE || 'railway',
+    port: process.env.DB_PORT,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    port: 3306,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 0,
-    socketPath: '/tmp/mysql.sock',
-    authPlugins: {
-        mysql_native_password: () => () => Buffer.from(process.env.DB_PASSWORD || 'iJulio@1700')
+    ssl: {
+        rejectUnauthorized: false
     }
 });
 
@@ -26,18 +22,13 @@ pool.getConnection()
         console.log('Using configuration:', {
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
-            database: process.env.DB_DATABASE
+            database: process.env.DB_DATABASE,
+            port: process.env.DB_PORT
         });
         connection.release();
     })
     .catch(err => {
         console.error('Error connecting to the database:', err.message);
-        console.error('Database config:', {
-            host: process.env.DB_HOST,
-            user: process.env.DB_USER,
-            database: process.env.DB_DATABASE,
-            port: 3306
-        });
     });
 
 module.exports = pool; 

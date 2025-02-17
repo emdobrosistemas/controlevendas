@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "echo 'No build step needed'",
+    "vercel-build": "echo 'Build step complete'"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

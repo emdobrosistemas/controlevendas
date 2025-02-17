@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "public/$1"
+    }
+  ],
+  "env": {
+    "DB_HOST": "nozomi.proxy.rlwy.net",
+    "DB_USER": "root",
+    "DB_PASSWORD": "uULNKYatvAgfVRiSuZAjQTJyqyCkBfOy",
+    "DB_PORT": "58424",
+    "DB_DATABASE": "railway"
+  }
+} 
