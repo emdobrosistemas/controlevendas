@@ -43,7 +43,7 @@ function checkSessionTimeout() {
 }
 
 // Funções para interagir com a API
-const API_URL = 'http://localhost:3000/api';
+const API_URL = window.location.origin + '/api';
 
 // Função para permitir apenas números e vírgula
 function apenasNumeros(event) {

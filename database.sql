@@ -53,7 +53,6 @@ VALUES ('Administrador', 'admin@admin.com', '123456', 'admin');
 -- Primeiro, vamos inserir as permissões do Administrador
 INSERT INTO permissoes (usuario_id, tela, pode_ver, pode_editar, pode_criar, pode_deletar)
 VALUES 
-
 -- Permissões para Administrador (usuario_id = 1)
 (1, 'lancamentos', true, true, true, true),
 (1, 'resultados', true, true, true, true),
