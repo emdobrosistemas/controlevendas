@@ -1143,24 +1143,30 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fazerLogin(event) {
     event.preventDefault();
     
-    const email = event.target.email.value;
-    const senha = event.target.senha.value;
-    
     try {
-        const response = await fetch(`${window.location.origin}/api/usuarios/login`, {
+        const email = event.target.email.value;
+        const senha = event.target.senha.value;
+        
+        console.log('Tentando login com:', { email, senha });
+
+        const response = await fetch('/api/usuarios/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email, senha })
+            body: JSON.stringify({ email, senha }),
+            credentials: 'same-origin'
         });
 
+        console.log('Response status:', response.status);
+
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Erro ao fazer login');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Erro ao fazer login');
         }
 
         const data = await response.json();
+        console.log('Login bem-sucedido:', data);
         
         // Salva os dados do usuário no localStorage
         localStorage.setItem('usuario', JSON.stringify(data));
@@ -1189,7 +1195,7 @@ async function fazerLogin(event) {
         
     } catch (error) {
         console.error('Erro no login:', error);
-        showNotification(error.message, 'error');
+        showNotification(error.message || 'Erro ao fazer login', 'error');
     }
 }
 

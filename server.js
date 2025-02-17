@@ -6,13 +6,15 @@ const db = require('./db/connection');
 
 const app = express();
 
-// Configuração do CORS
+// Configuração do CORS mais permissiva para desenvolvimento
 app.use(cors({
-    origin: '*', // Em produção, você deve especificar o domínio exato
+    origin: true,
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Middleware para processar JSON
 app.use(express.json());
 
 // Adicione este middleware antes das rotas
@@ -39,10 +41,19 @@ app.use('/api', (err, req, res, next) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
-// Servir arquivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
+// Adicione isso após as rotas no server.js
+app.use((err, req, res, next) => {
+    console.error('Erro na aplicação:', err);
+    res.status(500).json({
+        error: 'Erro interno do servidor',
+        message: err.message
+    });
+});
 
-// Rota para a página principal - deve ser a última rota
+// Servir arquivos estáticos
+app.use(express.static('public'));
+
+// Rota para a página principal
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
